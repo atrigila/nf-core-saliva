@@ -11,7 +11,7 @@ WorkflowSaliva.initialise(params, log)
 
 // TODO nf-core: Add all file path parameters for the pipeline to the list below
 // Check input path parameters to see if they exist
-def checkPathParamList = [ params.input, params.multiqc_config, params.fasta ]
+def checkPathParamList = [ params.input, params.multiqc_config, params.fasta, params.input_vcf ]
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 // Check mandatory parameters
@@ -122,7 +122,9 @@ workflow SALIVA {
     // MODULE: TABIX
     //
 
-    index_ch = TABIX_TABIX(input_vcf)
+    input_vcf_ch = Channel.fromPath(params.input_vcf, checkIfExists: true)
+
+    index_ch = TABIX_TABIX(input_vcf_ch)
 
 }
 
