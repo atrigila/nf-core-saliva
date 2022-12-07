@@ -52,11 +52,20 @@ include { FASTQC                      } from '../modules/nf-core/fastqc/main'
 include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main'
 
+include { ECHO_READS } from '../modules/local/echo_reads'
+include { ECHO_READS as ECHO_READS_ONCE } from '../modules/local/echo_reads'
+include { ECHO_READS as ECHO_READS_TWICE } from '../modules/local/echo_reads'
+include { FASTP } from '../modules/nf-core/fastp/main'
+
+include { TABIX_TABIX } from '../modules/nf-core/tabix/tabix/main'
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
+
+
 
 // Info required for completion email and summary
 def multiqc_report = []
@@ -108,7 +117,16 @@ workflow SALIVA {
     )
     multiqc_report = MULTIQC.out.report.toList()
     ch_versions    = ch_versions.mix(MULTIQC.out.versions)
+
+    //
+    // MODULE: TABIX
+    //
+
+    index_ch = TABIX_TABIX(input_vcf)
+
 }
+
+
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
