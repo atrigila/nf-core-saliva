@@ -297,7 +297,7 @@
     "properties": {
         "input_vcf": {
             "type": "string",
-            "default": null
+            "default": "None"
         }
     }
 }
