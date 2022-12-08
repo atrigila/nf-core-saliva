@@ -15,7 +15,7 @@ def checkPathParamList = [ params.input, params.multiqc_config, params.fasta, pa
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 // Check mandatory parameters
-if (params.input) { ch_input = file(params.input) } else { exit 1, 'Input samplesheet not specified!' }
+if (params.input) { ch_input = file(params.input_vcf) } else { exit 1, 'Input vcf not specified!' }
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -37,7 +37,6 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
-include { INPUT_CHECK } from '../subworkflows/local/input_check'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -48,16 +47,10 @@ include { INPUT_CHECK } from '../subworkflows/local/input_check'
 //
 // MODULE: Installed directly from nf-core/modules
 //
-include { FASTQC                      } from '../modules/nf-core/fastqc/main'
-include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
-include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main'
 
-include { ECHO_READS } from '../modules/local/echo_reads'
-include { ECHO_READS as ECHO_READS_ONCE } from '../modules/local/echo_reads'
-include { ECHO_READS as ECHO_READS_TWICE } from '../modules/local/echo_reads'
-include { FASTP } from '../modules/nf-core/fastp/main'
-
-include { TABIX_TABIX } from '../modules/nf-core/tabix/tabix/main'
+include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/custom/dumpsoftwareversions/main'
+include { MULTIQC                       } from '../modules/nf-core/multiqc/main'
+include { TABIX_TABIX                   } from '../modules/nf-core/tabix/tabix/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,21 +67,32 @@ workflow SALIVA {
 
     ch_versions = Channel.empty()
 
-    //
-    // SUBWORKFLOW: Read in samplesheet, validate and stage input files
-    //
-    INPUT_CHECK (
-        ch_input
+
+    // Typically, input channels are parsed from a samplesheet, which is given as input to the pipeline
+    // The "samplesheet_check" script will generate a meta map (see below) and check the input files. See other pipelines for various examples.
+    // Here we just mock a meta map and take the path to the vcf file from `params`
+    ch_vcf = Channel.of(
+        [
+            [id:"vcf"],                                        // nf-core module require a meta map with their inputs
+            file(params.input_vcf, checkIfExists:true)
+        ]
     )
-    ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
 
     //
-    // MODULE: Run FastQC
+    // MODULE: TABIX
     //
-    FASTQC (
-        INPUT_CHECK.out.reads
-    )
-    ch_versions = ch_versions.mix(FASTQC.out.versions.first())
+
+    // Outputs are defined in the module with "emit" statements.
+   ch_tbi = TABIX_TABIX(ch_vcf).out.tbi
+
+
+   ch_vcf_tbi = ch_vcf.join(ch_tbi)
+    // This will yield a channel of format
+    // [
+    //     [id:"vcf"], 
+    //     vcf, 
+    //     tbi
+    // ]
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
         ch_versions.unique().collectFile(name: 'collated_versions.yml')
@@ -118,13 +122,6 @@ workflow SALIVA {
     multiqc_report = MULTIQC.out.report.toList()
     ch_versions    = ch_versions.mix(MULTIQC.out.versions)
 
-    //
-    // MODULE: TABIX
-    //
-
-    input_vcf_ch = Channel.fromPath(params.input_vcf, checkIfExists: true)
-
-    index_ch = TABIX_TABIX(input_vcf_ch)
 
 }
 
