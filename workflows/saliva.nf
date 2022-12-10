@@ -58,6 +58,8 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/custom/dumpso
 include { MULTIQC                       } from '../modules/nf-core/multiqc/main'
 include { TABIX_TABIX                   } from '../modules/nf-core/tabix/tabix/main'
 include { BCFTOOLS_NORM                 } from '../modules/nf-core/bcftools/norm/main' // This is the call to the nf-core original module
+include { VCFTOOLS                      } from '../modules/nf-core/vcftools/main'
+include { PLINK_VCF                     } from '../modules/nf-core/plink/vcf/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -105,12 +107,17 @@ workflow SALIVA {
     // MODULE: BCFTOOLS_NORM
     //
 
-    // If I were to use the tool just as it is from nf-core, I would do the following:
 
+    // Option 1: Use nf-core module
+    // If I were to use the tool just as it is from nf-core, I would do the following:
+    // If normally FASTA files are optional in nf-core modules, I could use the original tool
     // ch_vcf_tbi is a tuple channel (?) contaning meta, vcf, and tbi.
     // Then:
-    // ch_norm_vcf = BCFTOOLS_NORM(ch_vcf_tbi, ch_fasta).out.vcf // Here I would keep the emited normalized vcf
+     ch_norm_vcf = BCFTOOLS_NORM(ch_vcf_tbi, ch_fasta).out.vcf // Here I would keep the emited normalized vcf.
+     // However, I am not passing the additional arguments (+any, etc). I think this should be done in the modules.config
 
+
+    // Option 2: local copy of BCFTOOLS
     // I will make a copy of the contents of bcftools/norm into the local modules, delete the fasta requirement, add the +any arguments and try to run it.
     // The new file is in modules/local/local_bcftools_norm.nf
     // Not sure if I should also copy the meta.yml file
@@ -118,11 +125,49 @@ workflow SALIVA {
     ch_norm_vcf = LOCAL_BCFTOOLS_NORM(ch_vcf_tbi).out.vcf
 
 
+    //
+    // MODULE: TABIX
+    //
 
+    // Indexing the previously normalized VCF
+    ch_tbi = TABIX_TABIX(ch_norm_vcf).out.tbi
+    ch_vcf_tbi = ch_vcf.join(ch_tbi)
+
+    //
+    // MODULE: VCFTOOLS
+    //
+
+    // Again, here I should pass an external bed file, which I am unsure how to do that
+    ch_filtered_vcf = VCFTOOLS(ch_vcf_tbi).out.vcf
+
+    // Meta map:
+        ch_filter_vcf_meta = Channel.of(
+        [
+            [id:"vcf"],                                        // PLINK_VCF requires a meta map with their inputs
+            ch_filtered_vcf
+        ]
+    )
+
+
+    //
+    // MODULE: PLINK_VCF
+    //
+    // I should figure out how to pass additional arguments such as: --snps-only
+
+    // Could there be a channel emiting all of them together at once?
+    bed_ch = PLINK_VCF(ch_filter_vcf_meta).out.bed
+    bim_ch = PLINK_VCF(ch_filter_vcf_meta).out.bim
+    fam_ch = PLINK_VCF(ch_filter_vcf_meta).out.fam
+
+
+
+    // I should store info on TileDB. There is not a nf-core module for that. Best approach? Local module?
 
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
         ch_versions.unique().collectFile(name: 'collated_versions.yml')
+
+
     )
 
     //
