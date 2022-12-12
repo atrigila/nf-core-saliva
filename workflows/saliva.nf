@@ -57,7 +57,7 @@ include { LOCAL_BCFTOOLS_NORM           } from '../modules/local/local_bcftools_
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/custom/dumpsoftwareversions/main'
 include { MULTIQC                       } from '../modules/nf-core/multiqc/main'
 include { TABIX_TABIX                   } from '../modules/nf-core/tabix/tabix/main'
-include { BCFTOOLS_NORM                 } from '../modules/nf-core/bcftools/norm/main' addParams( options: [args: '-m +any'] )
+include { BCFTOOLS_NORM                 } from '../modules/nf-core/bcftools/norm/main'
 include { VCFTOOLS                      } from '../modules/nf-core/vcftools/main'
 include { PLINK_VCF                     } from '../modules/nf-core/plink/vcf/main'
 
