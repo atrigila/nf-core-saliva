@@ -11,10 +11,15 @@
             "fa_icon": "fas fa-terminal",
             "description": "Define where the pipeline should find input data and save output data.",
             "required": [
-                "input",
                 "outdir"
             ],
             "properties": {
+                "input_vcf": {
+                    "type": "string",
+                    "default": "None",
+                    "fa_icon": "fas fa-file-alt",
+                    "description": "Path to VCF containing information for a single sample."
+                },
                 "input": {
                     "type": "string",
                     "format": "file-path",
@@ -293,11 +298,5 @@
         {
             "$ref": "#/definitions/generic_options"
         }
-    ],
-    "properties": {
-        "input_vcf": {
-            "type": "string",
-            "default": "None"
-        }
-    }
+    ]
 }
