@@ -92,8 +92,8 @@ workflow SALIVA {
     //
 
     // Outputs are defined in the module with "emit" statements.
-   ch_tbi = TABIX_TABIX(ch_vcf).out.tbi  // I have an error here when running the pipeline with a sample input vcf : No such variable: Exception evaluating property 'out' for nextflow.script.ChannelOut, Reason: groovy.lang.MissingPropertyException: No such property: out for class: groovyx.gpars.dataflow.DataflowBroadcast
-
+    TABIX_TABIX(ch_vcf)  // I have an error here when running the pipeline with a sample input vcf : No such variable: Exception evaluating property 'out' for nextflow.script.ChannelOut, Reason: groovy.lang.MissingPropertyException: No such property: out for class: groovyx.gpars.dataflow.DataflowBroadcast
+    ch_tbi = TABIX_TABIX.out.tbi
 
     ch_vcf_tbi = ch_vcf.join(ch_tbi)
     // This will yield a channel of format
