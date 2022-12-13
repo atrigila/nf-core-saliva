@@ -20,6 +20,14 @@
                     "fa_icon": "fas fa-file-alt",
                     "description": "Path to VCF containing information for a single sample."
                 },
+                "rsid_file": {
+                    "type": "string",
+                    "default": null,
+                    "fa_icon": "fas fa-align-center",
+                    "format": "path",
+                    "description": "",
+                    "help_text": ""
+                },
                 "input": {
                     "type": "string",
                     "format": "file-path",
