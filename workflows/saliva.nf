@@ -11,11 +11,11 @@ WorkflowSaliva.initialise(params, log)
 
 // TODO nf-core: Add all file path parameters for the pipeline to the list below
 // Check input path parameters to see if they exist
-def checkPathParamList = [ params.input, params.multiqc_config, params.fasta, params.input_vcf ]
+def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf ]
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 // Check mandatory parameters
-if (params.input) { ch_input = file(params.input_vcf) } else { exit 1, 'Input vcf not specified!' }
+if (params.input_vcf ) { ch_input = file(params.input_vcf) } else { exit 1, 'Input vcf not specified!' }
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -57,9 +57,11 @@ include { LOCAL_BCFTOOLS_NORM           } from '../modules/local/local_bcftools_
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/custom/dumpsoftwareversions/main'
 include { MULTIQC                       } from '../modules/nf-core/multiqc/main'
 include { TABIX_TABIX                   } from '../modules/nf-core/tabix/tabix/main'
+include { TABIX_TABIX as TABIX_NORM     } from '../modules/nf-core/tabix/tabix/main'
 include { BCFTOOLS_NORM                 } from '../modules/nf-core/bcftools/norm/main'
 include { VCFTOOLS                      } from '../modules/nf-core/vcftools/main'
 include { PLINK_VCF                     } from '../modules/nf-core/plink/vcf/main'
+include { BCFTOOLS_VIEW                 } from '../modules/nf-core/bcftools/view/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -91,29 +93,26 @@ workflow SALIVA {
     // MODULE: TABIX
     //
 
-    // Outputs are defined in the module with "emit" statements.
-    TABIX_TABIX(ch_vcf)  // I have an error here when running the pipeline with a sample input vcf : No such variable: Exception evaluating property 'out' for nextflow.script.ChannelOut, Reason: groovy.lang.MissingPropertyException: No such property: out for class: groovyx.gpars.dataflow.DataflowBroadcast
+    TABIX_TABIX(
+        ch_vcf
+    )
     ch_tbi = TABIX_TABIX.out.tbi
-
     ch_vcf_tbi = ch_vcf.join(ch_tbi)
-    // This will yield a channel of format
-    // [
-    //     [id:"vcf"],
-    //     vcf,
-    //     tbi
-    // ]
 
     //
     // MODULE: BCFTOOLS_NORM
     //
 
-
+    ch_fasta = Channel.empty()
     // Option 1: Use nf-core module
     // If I were to use the tool just as it is from nf-core, I would do the following:
     // If normally FASTA files are optional in nf-core modules, I could use the original tool
     // ch_vcf_tbi is a tuple channel (?) contaning meta, vcf, and tbi.
     // Then:
-     ch_norm_vcf = BCFTOOLS_NORM(ch_vcf_tbi, ch_fasta).out.vcf // Here I would keep the emited normalized vcf.
+    BCFTOOLS_NORM(
+        ch_vcf_tbi, ch_fasta
+    ) // Here I would keep the emited normalized vcf.
+    ch_norm_vcf = BCFTOOLS_NORM.out.vcf
      // However, I am not passing the additional arguments (+any, etc). I think this should be done in the modules.config
 
 
@@ -122,7 +121,7 @@ workflow SALIVA {
     // The new file is in modules/local/local_bcftools_norm.nf
     // Not sure if I should also copy the meta.yml file
 
-    ch_norm_vcf = LOCAL_BCFTOOLS_NORM(ch_vcf_tbi).out.vcf
+    //ch_norm_vcf = LOCAL_BCFTOOLS_NORM(ch_vcf_tbi).out.vcf
 
 
     //
@@ -130,15 +129,26 @@ workflow SALIVA {
     //
 
     // Indexing the previously normalized VCF
-    ch_tbi = TABIX_TABIX(ch_norm_vcf).out.tbi
-    ch_vcf_tbi = ch_vcf.join(ch_tbi)
+    TABIX_NORM(
+        ch_norm_vcf
+    )
+    ch_norm_tbi = TABIX_TABIX.out.tbi
+    ch_norm_vcf_tbi = ch_vcf.join(ch_tbi)
 
     //
     // MODULE: VCFTOOLS
     //
 
     // Again, here I should pass an external bed file, which I am unsure how to do that
-    ch_filtered_vcf = VCFTOOLS(ch_vcf_tbi).out.vcf
+    ch_bed = Channel.empty()
+    ch_diff_variant_file = Channel.empty()
+    VCFTOOLS(
+        ch_vcf, ch_bed, ch_diff_variant_file
+    )
+    ch_filtered_vcf = VCFTOOLS.out.vcf
+
+
+
 
     // Meta map:
         ch_filter_vcf_meta = Channel.of(
@@ -148,16 +158,18 @@ workflow SALIVA {
         ]
     )
 
-
     //
     // MODULE: PLINK_VCF
     //
     // I should figure out how to pass additional arguments such as: --snps-only
 
     // Could there be a channel emiting all of them together at once?
-    bed_ch = PLINK_VCF(ch_filter_vcf_meta).out.bed
-    bim_ch = PLINK_VCF(ch_filter_vcf_meta).out.bim
-    fam_ch = PLINK_VCF(ch_filter_vcf_meta).out.fam
+    PLINK_VCF(
+        ch_filter_vcf_meta
+    )
+    bed_ch = PLINK_VCF.out.bed
+    bim_ch = PLINK_VCF.out.bim
+    fam_ch = PLINK_VCF.out.fam
 
 
 
@@ -183,7 +195,6 @@ workflow SALIVA {
     ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
     ch_multiqc_files = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml'))
     ch_multiqc_files = ch_multiqc_files.mix(CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect())
-    ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
 
     MULTIQC (
         ch_multiqc_files.collect(),
