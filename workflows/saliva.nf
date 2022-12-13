@@ -11,7 +11,7 @@ WorkflowSaliva.initialise(params, log)
 
 // TODO nf-core: Add all file path parameters for the pipeline to the list below
 // Check input path parameters to see if they exist
-def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf ]
+def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf, params.rsid_file ]
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 // Check mandatory parameters
@@ -103,16 +103,16 @@ workflow SALIVA {
     // MODULE: BCFTOOLS_NORM
     //
 
-    ch_fasta = Channel.empty()
+   // ch_fasta = Channel.empty()
     // Option 1: Use nf-core module
     // If I were to use the tool just as it is from nf-core, I would do the following:
     // If normally FASTA files are optional in nf-core modules, I could use the original tool
     // ch_vcf_tbi is a tuple channel (?) contaning meta, vcf, and tbi.
     // Then:
-    BCFTOOLS_NORM(
-        ch_vcf_tbi, ch_fasta
-    ) // Here I would keep the emited normalized vcf.
-    ch_norm_vcf = BCFTOOLS_NORM.out.vcf
+   // BCFTOOLS_NORM(
+   //     ch_vcf_tbi, ch_fasta
+   // ) // Here I would keep the emited normalized vcf.
+   // ch_norm_vcf = BCFTOOLS_NORM.out.vcf
      // However, I am not passing the additional arguments (+any, etc). I think this should be done in the modules.config
 
 
@@ -121,8 +121,10 @@ workflow SALIVA {
     // The new file is in modules/local/local_bcftools_norm.nf
     // Not sure if I should also copy the meta.yml file
 
-    //ch_norm_vcf = LOCAL_BCFTOOLS_NORM(ch_vcf_tbi).out.vcf
-
+    LOCAL_BCFTOOLS_NORM(
+        ch_vcf_tbi
+    )
+    ch_norm_vcf = LOCAL_BCFTOOLS_NORM.out.vcf
 
     //
     // MODULE: TABIX
@@ -138,25 +140,16 @@ workflow SALIVA {
     //
     // MODULE: VCFTOOLS
     //
+    ch_bed = Channel.fromPath(
+        params.rsid_file
+    )
 
-    // Again, here I should pass an external bed file, which I am unsure how to do that
-    ch_bed = Channel.empty()
-    ch_diff_variant_file = Channel.empty()
     VCFTOOLS(
-        ch_vcf, ch_bed, ch_diff_variant_file
+        ch_vcf, ch_bed, []
     )
     ch_filtered_vcf = VCFTOOLS.out.vcf
 
 
-
-
-    // Meta map:
-        ch_filter_vcf_meta = Channel.of(
-        [
-            [id:"vcf"],                                        // PLINK_VCF requires a meta map with their inputs
-            ch_filtered_vcf
-        ]
-    )
 
     //
     // MODULE: PLINK_VCF
@@ -165,7 +158,7 @@ workflow SALIVA {
 
     // Could there be a channel emiting all of them together at once?
     PLINK_VCF(
-        ch_filter_vcf_meta
+        ch_filtered_vcf
     )
     bed_ch = PLINK_VCF.out.bed
     bim_ch = PLINK_VCF.out.bim
