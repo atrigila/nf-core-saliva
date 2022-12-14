@@ -103,24 +103,6 @@ workflow SALIVA {
     // MODULE: BCFTOOLS_NORM
     //
 
-   // ch_fasta = Channel.empty()
-    // Option 1: Use nf-core module
-    // If I were to use the tool just as it is from nf-core, I would do the following:
-    // If normally FASTA files are optional in nf-core modules, I could use the original tool
-    // ch_vcf_tbi is a tuple channel (?) contaning meta, vcf, and tbi.
-    // Then:
-   // BCFTOOLS_NORM(
-   //     ch_vcf_tbi, ch_fasta
-   // ) // Here I would keep the emited normalized vcf.
-   // ch_norm_vcf = BCFTOOLS_NORM.out.vcf
-     // However, I am not passing the additional arguments (+any, etc). I think this should be done in the modules.config
-
-
-    // Option 2: local copy of BCFTOOLS
-    // I will make a copy of the contents of bcftools/norm into the local modules, delete the fasta requirement, add the +any arguments and try to run it.
-    // The new file is in modules/local/local_bcftools_norm.nf
-    // Not sure if I should also copy the meta.yml file
-
     LOCAL_BCFTOOLS_NORM(
         ch_vcf_tbi
     )
@@ -140,7 +122,12 @@ workflow SALIVA {
     //
     // MODULE: VCFTOOLS
     //
-    ch_bed = Channel.fromPath(
+  //  ch_bed = Channel.fromPath(
+  //      params.rsid_file
+  //  )
+
+
+    ch_bed = file(
         params.rsid_file
     )
 
@@ -149,12 +136,11 @@ workflow SALIVA {
     )
     ch_filtered_vcf = VCFTOOLS.out.vcf
 
-
+    ch_filtered_vcf.view()
 
     //
     // MODULE: PLINK_VCF
     //
-    // I should figure out how to pass additional arguments such as: --snps-only
 
     // Could there be a channel emiting all of them together at once?
     PLINK_VCF(
