@@ -38,8 +38,6 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 // LOCAL MODULES:
 //
 
-include { LOCAL_BCFTOOLS_NORM           } from '../modules/local/local_bcftools_norm'
-
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
@@ -96,47 +94,25 @@ workflow SALIVA {
     TABIX_TABIX(
         ch_vcf
     )
-    ch_tbi = TABIX_TABIX.out.tbi
-    ch_vcf_tbi = ch_vcf.join(ch_tbi)
+    ch_vcf_tbi = ch_vcf.join(TABIX_TABIX.out.tbi)
+    ch_vcf_tbi.dump(tag:"CH_VCF_TBI") // this will print the channel contents when running nextflow with `-dump-channels`
 
     //
     // MODULE: BCFTOOLS_NORM
     //
 
-    LOCAL_BCFTOOLS_NORM(
-        ch_vcf_tbi
+    BCFTOOLS_NORM(
+        ch_vcf_tbi,
+        params.fasta
     )
-    ch_norm_vcf = LOCAL_BCFTOOLS_NORM.out.vcf
-
-    //
-    // MODULE: TABIX
-    //
-
-    // Indexing the previously normalized VCF
-    TABIX_NORM(
-        ch_norm_vcf
-    )
-    ch_norm_tbi = TABIX_TABIX.out.tbi
-    ch_norm_vcf_tbi = ch_vcf.join(ch_tbi)
 
     //
     // MODULE: VCFTOOLS
     //
-  //  ch_bed = Channel.fromPath(
-  //      params.rsid_file
-  //  )
-
-
-    ch_bed = file(
-        params.rsid_file
-    )
-
     VCFTOOLS(
-        ch_vcf, ch_bed, []
+        BCFTOOLS_NORM.out.vcf, [], []
     )
     ch_filtered_vcf = VCFTOOLS.out.vcf
-
-    ch_filtered_vcf.view()
 
     //
     // MODULE: PLINK_VCF
@@ -164,25 +140,25 @@ workflow SALIVA {
     //
     // MODULE: MultiQC
     //
-    workflow_summary    = WorkflowSaliva.paramsSummaryMultiqc(workflow, summary_params)
-    ch_workflow_summary = Channel.value(workflow_summary)
+    // workflow_summary    = WorkflowSaliva.paramsSummaryMultiqc(workflow, summary_params)
+    // ch_workflow_summary = Channel.value(workflow_summary)
 
-    methods_description    = WorkflowSaliva.methodsDescriptionText(workflow, ch_multiqc_custom_methods_description)
-    ch_methods_description = Channel.value(methods_description)
+    // methods_description    = WorkflowSaliva.methodsDescriptionText(workflow, ch_multiqc_custom_methods_description)
+    // ch_methods_description = Channel.value(methods_description)
 
-    ch_multiqc_files = Channel.empty()
-    ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
-    ch_multiqc_files = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml'))
-    ch_multiqc_files = ch_multiqc_files.mix(CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect())
+    // ch_multiqc_files = Channel.empty()
+    // ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
+    // ch_multiqc_files = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml'))
+    // ch_multiqc_files = ch_multiqc_files.mix(CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect())
 
-    MULTIQC (
-        ch_multiqc_files.collect(),
-        ch_multiqc_config.collect().ifEmpty([]),
-        ch_multiqc_custom_config.collect().ifEmpty([]),
-        ch_multiqc_logo.collect().ifEmpty([])
-    )
-    multiqc_report = MULTIQC.out.report.toList()
-    ch_versions    = ch_versions.mix(MULTIQC.out.versions)
+    // MULTIQC (
+    //     ch_multiqc_files.collect(),
+    //     ch_multiqc_config.collect().ifEmpty([]),
+    //     ch_multiqc_custom_config.collect().ifEmpty([]),
+    //     ch_multiqc_logo.collect().ifEmpty([])
+    // )
+    // multiqc_report = MULTIQC.out.report.toList()
+    // ch_versions    = ch_versions.mix(MULTIQC.out.versions)
 
 
 }
