@@ -37,7 +37,7 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 // LOCAL MODULES:
 //
-
+include { PLINK_RECODE                     } from '../modules/local/plink_recode'
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
@@ -130,6 +130,17 @@ workflow SALIVA {
     bim_ch = PLINK_VCF.out.bim
     fam_ch = PLINK_VCF.out.fam
 
+    ch_bed_bim_fam = bed_ch.join(bim_ch).join(fam_ch)
+
+    ch_bed_bim_fam.dump(tag:"CH_bed_bim_bam")
+
+
+    PLINK_RECODE(
+        ch_bed_bim_fam
+    )
+
+    ch_ped_map = PLINK_RECODE.out.ped.join(PLINK_RECODE.out.map)
+    ch_ped_map.dump(tag:"CH_ped_map_PLINK_RECODE")
 
 
     // I should store info on TileDB. There is not a nf-core module for that. Best approach? Local module?
