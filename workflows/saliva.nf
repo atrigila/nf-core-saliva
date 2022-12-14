@@ -87,6 +87,8 @@ workflow SALIVA {
         ]
     )
 
+    ch_vcf.dump(tag:"CH_VCF")
+
     //
     // MODULE: TABIX
     //
@@ -101,18 +103,20 @@ workflow SALIVA {
     // MODULE: BCFTOOLS_NORM
     //
 
-    BCFTOOLS_NORM(
-        ch_vcf_tbi,
-        params.fasta
-    )
+  //  BCFTOOLS_NORM(
+  //      ch_vcf_tbi,
+  //      params.fasta
+  //  )
 
     //
     // MODULE: VCFTOOLS
     //
     VCFTOOLS(
-        BCFTOOLS_NORM.out.vcf, [], []
+        ch_vcf, [], []
     )
     ch_filtered_vcf = VCFTOOLS.out.vcf
+
+    ch_filtered_vcf.dump(tag:"CH_filtered_vcf_VCFTOOLS")
 
     //
     // MODULE: PLINK_VCF
