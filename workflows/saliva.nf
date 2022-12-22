@@ -11,7 +11,7 @@ WorkflowSaliva.initialise(params, log)
 
 // TODO nf-core: Add all file path parameters for the pipeline to the list below
 // Check input path parameters to see if they exist
-def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf, params.rsid_file ]
+def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf, params.rsid_file, params.uri ]
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 // Check mandatory parameters
@@ -38,6 +38,8 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 // LOCAL MODULES:
 //
 include { PLINK_RECODE                     } from '../modules/local/plink_recode'
+include { TILEDBVCF_STORE                  } from '../modules/local/tiledb_vcf'
+
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
@@ -134,6 +136,9 @@ workflow SALIVA {
 
     ch_bed_bim_fam.dump(tag:"CH_bed_bim_bam")
 
+    //
+    // MODULE: PLINK_RECODE
+    //
 
     PLINK_RECODE(
         ch_bed_bim_fam
@@ -142,8 +147,20 @@ workflow SALIVA {
     ch_ped_map = PLINK_RECODE.out.ped.join(PLINK_RECODE.out.map)
     ch_ped_map.dump(tag:"CH_ped_map_PLINK_RECODE")
 
+    //
+    // MODULE: TILEDBVCF_STORE
+    //
 
-    // I should store info on TileDB. There is not a nf-core module for that. Best approach? Local module?
+
+    tiledb_array_uri = Channel.of(params.uri)
+
+
+    TILEDBVCF_STORE(
+        ch_vcf,
+        tiledb_array_uri
+    )
+    ch_out_store = TILEDBVCF_STORE.out.updatedb
+    ch_out_store.dump(tag:"CH_ped_map_TILEDBVCF_STORE")
 
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
