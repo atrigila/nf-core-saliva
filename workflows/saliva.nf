@@ -11,7 +11,7 @@ WorkflowSaliva.initialise(params, log)
 
 // TODO nf-core: Add all file path parameters for the pipeline to the list below
 // Check input path parameters to see if they exist
-def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf, params.rsid_file, params.uri ]
+def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf, params.rsid_file  ] //, params.uri ]
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 // Check mandatory parameters
@@ -38,7 +38,7 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 // LOCAL MODULES:
 //
 include { PLINK_RECODE                     } from '../modules/local/plink_recode'
-include { TILEDBVCF_STORE                  } from '../modules/local/tiledb_vcf'
+// include { TILEDBVCF_STORE                  } from '../modules/local/tiledb_vcf'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
@@ -152,15 +152,15 @@ workflow SALIVA {
     //
 
 
-    tiledb_array_uri = Channel.of(params.uri)
+  //  tiledb_array_uri = Channel.of(params.uri)
 
 
-    TILEDBVCF_STORE(
-        ch_vcf,
-        tiledb_array_uri
-    )
-    ch_out_store = TILEDBVCF_STORE.out.updatedb
-    ch_out_store.dump(tag:"CH_ped_map_TILEDBVCF_STORE")
+ //   TILEDBVCF_STORE(
+ //       ch_vcf,
+ //       tiledb_array_uri
+ //   )
+ //   ch_out_store = TILEDBVCF_STORE.out.updatedb
+ //   ch_out_store.dump(tag:"CH_ped_map_TILEDBVCF_STORE")
 
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
