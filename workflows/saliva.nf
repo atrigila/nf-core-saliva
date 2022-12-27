@@ -11,13 +11,17 @@ WorkflowSaliva.initialise(params, log)
 
 // TODO nf-core: Add all file path parameters for the pipeline to the list below
 // Check input path parameters to see if they exist
-def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf, params.rsid_file , params.uri ]
+def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf, params.rsid_file , params.uri, params.prs, params.ancestry, params.url_mongo ]
 //def checkPathParamList = [ params.multiqc_config, params.fasta, params.input, params.rsid_file  ] //, params.uri ] // If input is samplesheet
 
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 // Check mandatory parameters
 if (params.input_vcf ) { ch_input = file(params.input_vcf) } else { exit 1, 'Input vcf not specified!' } // If input is VCF
+//if (params.ancestry ) { ch_input = file(params.ancestry) } else { exit 1, 'Input Ancestry JSON not specified!' }
+//if (params.prs ) { ch_input = file(params.prs) } else { exit 1, 'Input PRS JSON not specified!' }
+//if (params.url_mongo ) { ch_input = file(params.url_mongo) } else { exit 1, 'Input URL Mongo not specified!' }
+
 //if (params.input) { ch_input = file(params.input) } else { exit 1, 'Input samplesheet not specified!' } // If input is Samplesheet
 
 
@@ -168,6 +172,24 @@ workflow SALIVA {
     ch_out_store = TILEDBVCF_STORE.out.updatedb
     ch_out_store.dump(tag:"CH_updateddb_TILEDBVCF_STORE")
 
+
+    //
+    // MODULE: UPLOAD_MONGO
+    //
+
+    ch_url_mongo = Channel.of(params.url_mongo)
+    ch_prs = file(params.prs)
+    ch_ancestry = file(params.ancestry)
+
+    UPLOAD_MONGO(
+        ch_filtered_vcf,
+        ch_url_mongo,
+        ch_prs,
+        ch_ancestry
+    )
+
+    ch_out_updatedmongodb = UPLOAD_MONGO.out.ch_out_updatedmongodb
+    ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
         ch_versions.unique().collectFile(name: 'collated_versions.yml')
