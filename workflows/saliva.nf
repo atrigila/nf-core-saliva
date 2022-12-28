@@ -47,6 +47,7 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 include { PLINK_RECODE                     } from '../modules/local/plink_recode'
 include { TILEDBVCF_STORE                  } from '../modules/local/tiledb_vcf'
+include { UPLOAD_MONGO                  } from '../modules/local/upload_db'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
@@ -177,18 +178,16 @@ workflow SALIVA {
     // MODULE: UPLOAD_MONGO
     //
 
-    ch_url_mongo = Channel.of(params.url_mongo)
-    ch_prs = file(params.prs)
+   ch_prs = file(params.prs)
     ch_ancestry = file(params.ancestry)
 
     UPLOAD_MONGO(
         ch_filtered_vcf,
-        ch_url_mongo,
         ch_prs,
         ch_ancestry
     )
 
-    ch_out_updatedmongodb = UPLOAD_MONGO.out.ch_out_updatedmongodb
+    ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
     ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
