@@ -5,7 +5,6 @@ process UPLOAD_MONGO {
 
     input:
     tuple val(meta), path(vcf)
-    path(url_mongo)
     path(prs)
     path(ancestry)
 
@@ -14,9 +13,8 @@ process UPLOAD_MONGO {
 
     script:
     """
-    Rscript --vanilla /home/anabella/R/upload2mongo2.R \\
-        -s ${vcf} \\
-        -u ${url_mongo} \\
+    Rscript --vanilla /home/anabella/R/upload2mongo2.r \\
+        -s ${meta} \\
         -p ${prs}  \\
         -v ${vcf} \\
         -a ${ancestry} \\
