@@ -46,7 +46,7 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 // LOCAL MODULES:
 //
 include { PLINK_RECODE                     } from '../modules/local/plink_recode'
-include { TILEDBVCF_STORE                  } from '../modules/local/tiledb_vcf'
+include { TILEDBVCF_STORE                  } from '../modules/local/tiledb-vcf/tiledb_vcf'
 include { UPLOAD_MONGO                  } from '../modules/local/upload_db'
 
 //
@@ -163,13 +163,22 @@ workflow SALIVA {
     //
 
 
-    tiledb_array_uri = Channel.of(params.uri)
 
+    tiledb_array_uri = Channel.of(params.uri)
+    ch_vcf_tbi_uri = ch_vcf_tbi.join(tiledb_array_uri)
+
+    ch_vcf_tbi_uri.view()
+
+   // TILEDBVCF_STORE(
+    //    ch_vcf_tbi,
+    //    tiledb_array_uri
+    //)
 
     TILEDBVCF_STORE(
-        ch_vcf_tbi,
-        tiledb_array_uri
+    ch_vcf_tbi_uri
     )
+
+
     ch_out_store = TILEDBVCF_STORE.out.updatedb
     ch_out_store.dump(tag:"CH_updateddb_TILEDBVCF_STORE")
 
