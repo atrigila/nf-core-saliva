@@ -1,31 +1,22 @@
 
 process TILEDBVCF_STORE {
     tag "$meta.id"
-    label 'process_high'
+    label 'process_low'
 
-    container "tiledb/tiledbvcf-cli:latest" // Call to a system-wide image
+    //container 'tiledb/tiledb:2.13.0'
 
     input:
-    tuple val(meta), path(vcf), path(tbi), path(tiledb_array_uri)
-
+    tuple val(meta), path(vcf), path(tbi)
+    path(tiledb_array_uri)
 
     output:
     tuple val(meta), path("$updated_db")    , optional:true, emit: updatedb
 
-    when:
-    task.ext.when == null || task.ext.when
-
     script:
-    def args = task.ext.args ?: ''
-
-    uri_command = "--uri ${tiledb_array_uri}"
-    samples_command = "--samples-file ${vcf} ${tbi}"
-
-
     """
-    tiledbvcf store $uri_command $samples_command $args
+    /home/anabella/anaconda3/envs/myenv/bin/tiledbvcf store --uri ${tiledb_array_uri} ${vcf}
     """
 
-    updated_db = "${tiledb_array_uri}"
+    //tiledbvcf store --uri ${tiledb_array_uri} ${vcf}
 
 }
