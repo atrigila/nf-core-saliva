@@ -169,14 +169,14 @@ workflow SALIVA {
 
     ch_vcf_tbi_uri.view()
 
-   // TILEDBVCF_STORE(
-    //    ch_vcf_tbi,
-    //    tiledb_array_uri
-    //)
-
     TILEDBVCF_STORE(
-    ch_vcf_tbi_uri
+        ch_vcf_tbi,
+        tiledb_array_uri
     )
+
+   // TILEDBVCF_STORE(
+   // ch_vcf_tbi_uri
+   //)
 
 
     ch_out_store = TILEDBVCF_STORE.out.updatedb
