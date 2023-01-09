@@ -11,13 +11,16 @@ WorkflowSaliva.initialise(params, log)
 
 // TODO nf-core: Add all file path parameters for the pipeline to the list below
 // Check input path parameters to see if they exist
-def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf, params.rsid_file , params.uri, params.prs, params.ancestry, params.url_mongo ]
+def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf, params.rsid_file , params.uri, params.url_mongo, params.input_vcf_samplesheet ]
 //def checkPathParamList = [ params.multiqc_config, params.fasta, params.input, params.rsid_file  ] //, params.uri ] // If input is samplesheet
 
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 // Check mandatory parameters
 if (params.input_vcf ) { ch_input = file(params.input_vcf) } else { exit 1, 'Input vcf not specified!' } // If input is VCF
+if (params.input_vcf_samplesheet) { ch_input_vcf_samplesheet = file(params.input_vcf_samplesheet) } else { exit 1, 'Input VCF samplesheet not specified!' }
+
+
 //if (params.ancestry ) { ch_input = file(params.ancestry) } else { exit 1, 'Input Ancestry JSON not specified!' }
 //if (params.prs ) { ch_input = file(params.prs) } else { exit 1, 'Input PRS JSON not specified!' }
 //if (params.url_mongo ) { ch_input = file(params.url_mongo) } else { exit 1, 'Input URL Mongo not specified!' }
@@ -53,6 +56,7 @@ include { UPLOAD_MONGO                  } from '../modules/local/upload_db'
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
 include { INPUT_CHECK } from '../subworkflows/local/input_check'
+include { INPUT_CHECK_VCF } from '../subworkflows/local/input_check_vcf'
 
 
 /*
@@ -89,18 +93,26 @@ workflow SALIVA {
 
     ch_versions = Channel.empty()
 
+    //
+    // SUBWORKFLOW: Read in VCF samplesheet, validate and stage input files
+    //
 
-    // Typically, input channels are parsed from a samplesheet, which is given as input to the pipeline
-    // The "samplesheet_check" script will generate a meta map (see below) and check the input files. See other pipelines for various examples.
-    // Here we just mock a meta map and take the path to the vcf file from `params`
-    ch_vcf = Channel.of(
-        [
-            [id:"vcf"],                                        // nf-core module require a meta map with their inputs
-            file(params.input_vcf, checkIfExists:true)
-        ]
+
+    INPUT_CHECK_VCF (
+        ch_input_vcf_samplesheet
     )
+    ch_versions = ch_versions.mix(INPUT_CHECK_VCF.out.versions)
 
-    ch_vcf.dump(tag:"CH_VCF")
+    ch_vcf_json= INPUT_CHECK_VCF.out.vcf_json
+
+    INPUT_CHECK_VCF.out.vcf_json.multiMap { meta, vcf, ancestry, traits ->
+        ch_vcf: [meta, vcf]
+        ch_ancestry: [meta, ancestry]
+        ch_traits: [meta, traits]
+    }
+    .set { ch_vcf_json_multimap}
+
+    ch_vcf = ch_vcf_json_multimap.ch_vcf
 
     //
     // MODULE: TABIX
@@ -113,22 +125,12 @@ workflow SALIVA {
     ch_vcf_tbi.dump(tag:"CH_VCF_TBI") // this will print the channel contents when running nextflow with `-dump-channels`
 
     //
-    // MODULE: BCFTOOLS_NORM
-    //
-
-  //  BCFTOOLS_NORM(
-  //      ch_vcf_tbi,
-  //      params.fasta
-  //  )
-
-    //
     // MODULE: VCFTOOLS
     //
     VCFTOOLS(
         ch_vcf, [], []
     )
     ch_filtered_vcf = VCFTOOLS.out.vcf
-
     ch_filtered_vcf.dump(tag:"CH_filtered_vcf_VCFTOOLS")
 
     //
@@ -144,25 +146,11 @@ workflow SALIVA {
     fam_ch = PLINK_VCF.out.fam
 
     ch_bed_bim_fam = bed_ch.join(bim_ch).join(fam_ch)
-
     ch_bed_bim_fam.dump(tag:"CH_bed_bim_bam")
-
-    //
-    // MODULE: PLINK_RECODE
-    //
-
-    PLINK_RECODE(
-        ch_bed_bim_fam
-    )
-
-    ch_ped_map = PLINK_RECODE.out.ped.join(PLINK_RECODE.out.map)
-    ch_ped_map.dump(tag:"CH_ped_map_PLINK_RECODE")
 
     //
     // MODULE: TILEDBVCF_STORE
     //
-
-
 
     tiledb_array_uri = Channel.of(params.uri)
     ch_vcf_tbi_uri = ch_vcf_tbi.join(tiledb_array_uri)
@@ -174,61 +162,18 @@ workflow SALIVA {
         tiledb_array_uri
     )
 
-   // TILEDBVCF_STORE(
-   // ch_vcf_tbi_uri
-   //)
-
-
-    ch_out_store = TILEDBVCF_STORE.out.updatedb
-    ch_out_store.dump(tag:"CH_updateddb_TILEDBVCF_STORE")
-
-
     //
     // MODULE: UPLOAD_MONGO
     //
 
-   ch_prs = file(params.prs)
-    ch_ancestry = file(params.ancestry)
+    ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_ancestry).join(ch_vcf_json_multimap.ch_traits)
 
     UPLOAD_MONGO(
-        ch_filtered_vcf,
-        ch_prs,
-        ch_ancestry
+        ch_to_mongo
     )
 
     ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
     ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
-
-    CUSTOM_DUMPSOFTWAREVERSIONS (
-        ch_versions.unique().collectFile(name: 'collated_versions.yml')
-
-
-    )
-
-    //
-    // MODULE: MultiQC
-    //
-    // workflow_summary    = WorkflowSaliva.paramsSummaryMultiqc(workflow, summary_params)
-    // ch_workflow_summary = Channel.value(workflow_summary)
-
-    // methods_description    = WorkflowSaliva.methodsDescriptionText(workflow, ch_multiqc_custom_methods_description)
-    // ch_methods_description = Channel.value(methods_description)
-
-    // ch_multiqc_files = Channel.empty()
-    // ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
-    // ch_multiqc_files = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml'))
-    // ch_multiqc_files = ch_multiqc_files.mix(CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect())
-
-    // MULTIQC (
-    //     ch_multiqc_files.collect(),
-    //     ch_multiqc_config.collect().ifEmpty([]),
-    //     ch_multiqc_custom_config.collect().ifEmpty([]),
-    //     ch_multiqc_logo.collect().ifEmpty([])
-    // )
-    // multiqc_report = MULTIQC.out.report.toList()
-    // ch_versions    = ch_versions.mix(MULTIQC.out.versions)
-
-
 }
 
 
