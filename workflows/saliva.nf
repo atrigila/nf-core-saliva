@@ -19,12 +19,6 @@ for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true
 // Check mandatory parameters
 if (params.input_vcf ) { ch_input = file(params.input_vcf) } else { exit 1, 'Input vcf not specified!' } // If input is VCF
 if (params.input_vcf_samplesheet) { ch_input_vcf_samplesheet = file(params.input_vcf_samplesheet) } else { exit 1, 'Input VCF samplesheet not specified!' }
-
-
-//if (params.ancestry ) { ch_input = file(params.ancestry) } else { exit 1, 'Input Ancestry JSON not specified!' }
-//if (params.prs ) { ch_input = file(params.prs) } else { exit 1, 'Input PRS JSON not specified!' }
-//if (params.url_mongo ) { ch_input = file(params.url_mongo) } else { exit 1, 'Input URL Mongo not specified!' }
-
 //if (params.input) { ch_input = file(params.input) } else { exit 1, 'Input samplesheet not specified!' } // If input is Samplesheet
 
 
@@ -50,13 +44,13 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 include { PLINK_RECODE                     } from '../modules/local/plink_recode'
 include { TILEDBVCF_STORE                  } from '../modules/local/tiledb-vcf/tiledb_vcf'
-include { UPLOAD_MONGO                  } from '../modules/local/upload_db'
+include { UPLOAD_MONGO                     } from '../modules/local/upload_db'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
-include { INPUT_CHECK } from '../subworkflows/local/input_check'
-include { INPUT_CHECK_VCF } from '../subworkflows/local/input_check_vcf'
+include { INPUT_CHECK                      } from '../subworkflows/local/input_check'
+include { INPUT_CHECK_VCF                  } from '../subworkflows/local/input_check_vcf'
 
 
 /*
@@ -72,7 +66,6 @@ include { INPUT_CHECK_VCF } from '../subworkflows/local/input_check_vcf'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/custom/dumpsoftwareversions/main'
 include { MULTIQC                       } from '../modules/nf-core/multiqc/main'
 include { TABIX_TABIX                   } from '../modules/nf-core/tabix/tabix/main'
-include { TABIX_TABIX as TABIX_NORM     } from '../modules/nf-core/tabix/tabix/main'
 include { BCFTOOLS_NORM                 } from '../modules/nf-core/bcftools/norm/main'
 include { VCFTOOLS                      } from '../modules/nf-core/vcftools/main'
 include { PLINK_VCF                     } from '../modules/nf-core/plink/vcf/main'
@@ -169,13 +162,11 @@ workflow SALIVA {
     //
 
     ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_ancestry).join(ch_vcf_json_multimap.ch_traits)
-
-
     ch_to_mongo.dump(tag:"CH_updateddb_MONGO")
 
-   // UPLOAD_MONGO(
-   //     ch_to_mongo
-   // )
+    UPLOAD_MONGO(
+        ch_to_mongo
+    )
 
     //ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
     //ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
