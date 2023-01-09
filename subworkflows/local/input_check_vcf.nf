@@ -15,9 +15,9 @@ workflow INPUT_CHECK_VCF {
         .map { create_vcf_json_channel(it) }
         .set { vcf_json }
 
-emit:
-    vcf_json                                 // channel: [ val(meta), vcf, ancestry, traits ]
-    versions = SAMPLESHEET_CHECK_VCF.out.versions // channel: [ versions.yml ]
+    emit:
+    vcf_json                                        // channel: [ val(meta), vcf, ancestry, traits ]
+    versions = SAMPLESHEET_CHECK_VCF.out.versions   // channel: [ versions.yml ]
 
 }
 
@@ -38,7 +38,7 @@ def create_vcf_json_channel(LinkedHashMap row) {
     if (!file(row.traits).exists()) {
         exit 1, "ERROR: Please check input samplesheet -> traits file does not exist!\n${row.traits}"
     }
-    vcf_json_meta = [ meta, file(row.vcf), file(row.ancestry), file(row.traits) ]
+    vcf_json_meta = [ meta,  file(row.vcf), file(row.ancestry), file(row.traits)  ]
     return vcf_json_meta
 }
 
