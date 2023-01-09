@@ -97,13 +97,13 @@ workflow SALIVA {
     // SUBWORKFLOW: Read in VCF samplesheet, validate and stage input files
     //
 
-
     INPUT_CHECK_VCF (
         ch_input_vcf_samplesheet
     )
     ch_versions = ch_versions.mix(INPUT_CHECK_VCF.out.versions)
 
     ch_vcf_json= INPUT_CHECK_VCF.out.vcf_json
+    ch_vcf_json.dump(tag:"CH_VCF_JSON")
 
     INPUT_CHECK_VCF.out.vcf_json.multiMap { meta, vcf, ancestry, traits ->
         ch_vcf: [meta, vcf]
@@ -113,6 +113,8 @@ workflow SALIVA {
     .set { ch_vcf_json_multimap}
 
     ch_vcf = ch_vcf_json_multimap.ch_vcf
+    ch_vcf.dump(tag:"CH_VCF")
+
 
     //
     // MODULE: TABIX
@@ -168,12 +170,15 @@ workflow SALIVA {
 
     ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_ancestry).join(ch_vcf_json_multimap.ch_traits)
 
-    UPLOAD_MONGO(
-        ch_to_mongo
-    )
 
-    ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
-    ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
+    ch_to_mongo.dump(tag:"CH_updateddb_MONGO")
+
+   // UPLOAD_MONGO(
+   //     ch_to_mongo
+   // )
+
+    //ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
+    //ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
 }
 
 
