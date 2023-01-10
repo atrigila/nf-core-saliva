@@ -121,7 +121,7 @@ workflow SALIVA {
     // MODULE: TILEDB_CREATE
     //
 
-    ch_uri = channel.of(params.uri)
+    ch_uri = Channel.value(params.uri)
     TILEDBVCF_CREATE(
         ch_uri
     )
