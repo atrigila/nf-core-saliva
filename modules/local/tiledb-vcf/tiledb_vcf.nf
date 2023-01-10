@@ -1,20 +1,36 @@
 
 process TILEDBVCF_STORE {
     tag "$meta.id"
-    label 'process_low'
+    label 'process_medium'
 
-    //container 'tiledb/tiledb:2.13.0'
+    conda "tiledb::tiledbvcf-py=0.21.0"
+    container "${ 'tiledb/tiledbvcf-cli:0.21.0' }"
+    containerOptions '--entrypoint ""'
 
     input:
     tuple val(meta), path(vcf), path(tbi)
     path(tiledb_array_uri)
 
     output:
-    tuple val(meta), path("$updated_db")    , optional:true, emit: updatedb
+    path("${updated_db}")    , optional:true, emit: updatedb
+    path  "versions.yml"                    , emit: versions
+
+    when:
+    task.ext.when == null || task.ext.when
 
     script:
+    def args = task.ext.args ?: ''
     """
-    /home/anabella/anaconda3/envs/myenv/bin/tiledbvcf store --uri ${tiledb_array_uri} ${vcf}
+    tiledbvcf \\
+        store \\
+        --uri $tiledb_array_uri \\
+        $vcf \\
+        $args
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        tiledbvcf: \$(tiledbvcf --version 2>&1 | head -n 1 | sed 's/^TileDB-VCF version //')
+    END_VERSIONS
     """
 
     //tiledbvcf store --uri ${tiledb_array_uri} ${vcf}
