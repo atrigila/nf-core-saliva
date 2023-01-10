@@ -1,0 +1,3 @@
+sample,vcf,ancestry,traits
+name_sample1,/media/anabella/datos/vcfs/MOCO22121964_impute-vcf.vcf.gz,/home/anabella/prs_mama/ancestry/MOCO22121964_ancestry-json.json,/home/anabella/prs_mama/traits/MOCO22121964_traits-json.json
+ADAL24121962,/media/anabella/datos/vcfs/ADAL24121962-REP_impute-vcf.vcf.gz,/home/anabella/prs_cad/ADRE27041947_ancestry-json.json,/home/anabella/prs_cad/ADRE27041947_traits-json.json
