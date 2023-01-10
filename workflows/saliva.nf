@@ -45,6 +45,7 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 include { TILEDBVCF_CREATE                      } from '../modules/local/tiledb-vcf/tiledbvcf_create'
 include { TILEDBVCF_STORE                       } from '../modules/local/tiledb-vcf/tiledb_vcf'
 
+
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
@@ -123,11 +124,13 @@ workflow SALIVA {
     //
 
     ch_uri = Channel.value(params.uri)
-    TILEDBVCF_CREATE(
-        ch_uri
-    )
+  //  TILEDBVCF_CREATE(
+  //      ch_uri
+  //  )
 
-    ch_new_uri = TILEDBVCF_CREATE.out.uri
+   // ch_new_uri = TILEDBVCF_CREATE.out.uri
+   // ch_new_uri.dump(tag:"CH_URI")
+
 
     //
     // MODULE: TILEDB_STORE
@@ -135,8 +138,11 @@ workflow SALIVA {
 
     TILEDBVCF_STORE(
         ch_vcf_tbi,
-        ch_new_uri
+        ch_uri
     )
+
+
+
 
 }
 
