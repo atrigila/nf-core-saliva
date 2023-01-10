@@ -11,7 +11,7 @@ WorkflowSaliva.initialise(params, log)
 
 // TODO nf-core: Add all file path parameters for the pipeline to the list below
 // Check input path parameters to see if they exist
-def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf, params.rsid_file , params.uri, params.url_mongo, params.input_vcf_samplesheet ]
+def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf, params.rsid_file , params.uri, params.input_vcf_samplesheet ]
 //def checkPathParamList = [ params.multiqc_config, params.fasta, params.input, params.rsid_file  ] //, params.uri ] // If input is samplesheet
 
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
@@ -42,9 +42,7 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 // LOCAL MODULES:
 //
-include { PLINK_RECODE                     } from '../modules/local/plink_recode'
-include { TILEDBVCF_STORE                  } from '../modules/local/tiledb-vcf/tiledb_vcf'
-include { UPLOAD_MONGO                     } from '../modules/local/upload_db'
+include { TILEDBVCF_CREATE                      } from '../modules/local/tiledb-vcf/tiledbvcf_create'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
@@ -120,56 +118,14 @@ workflow SALIVA {
     ch_vcf_tbi.dump(tag:"CH_VCF_TBI") // this will print the channel contents when running nextflow with `-dump-channels`
 
     //
-    // MODULE: VCFTOOLS
-    //
-    VCFTOOLS(
-        ch_vcf, [], []
-    )
-    ch_filtered_vcf = VCFTOOLS.out.vcf
-    ch_filtered_vcf.dump(tag:"CH_filtered_vcf_VCFTOOLS")
-
-    //
-    // MODULE: PLINK_VCF
+    // MODULE: TILEDB_CREATE
     //
 
-    // Could there be a channel emiting all of them together at once?
-    PLINK_VCF(
-        ch_filtered_vcf
-    )
-    bed_ch = PLINK_VCF.out.bed
-    bim_ch = PLINK_VCF.out.bim
-    fam_ch = PLINK_VCF.out.fam
-
-    ch_bed_bim_fam = bed_ch.join(bim_ch).join(fam_ch)
-    ch_bed_bim_fam.dump(tag:"CH_bed_bim_bam")
-
-    //
-    // MODULE: TILEDBVCF_STORE
-    //
-
-    tiledb_array_uri = Channel.of(params.uri)
-    ch_vcf_tbi_uri = ch_vcf_tbi.join(tiledb_array_uri)
-
-    ch_vcf_tbi_uri.view()
-
-    TILEDBVCF_STORE(
-        ch_vcf_tbi,
-        tiledb_array_uri
+    ch_uri = channel.of(params.uri)
+    TILEDBVCF_CREATE(
+        ch_uri
     )
 
-    //
-    // MODULE: UPLOAD_MONGO
-    //
-
-    ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_ancestry).join(ch_vcf_json_multimap.ch_traits)
-    ch_to_mongo.dump(tag:"CH_updateddb_MONGO")
-
-    UPLOAD_MONGO(
-        ch_to_mongo
-    )
-
-    //ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
-    //ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
 }
 
 
