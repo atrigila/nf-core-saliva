@@ -4,12 +4,13 @@ process TILEDBVCF_CREATE {
 
     conda "tiledb::tiledbvcf-py=0.21.0"
     container "${ 'tiledb/tiledbvcf-cli:0.21.0' }"
+    containerOptions '--entrypoint ""'
 
     input:
     val(uri)
 
     output:
-    path("${uri}"), emit: uri
+    path("${uri}")                , emit: uri
     path  "versions.yml"          , emit: versions
 
     when:
