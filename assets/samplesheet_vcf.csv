@@ -1,0 +1,2 @@
+sample,vcf,ancestry,traits
+name_sample1,/home/anabella/Descargas/adal/clean_NORMALIZED_Adal_hg19.vcf.gz,https://raw.githubusercontent.com/atrigila/nf-saliva-test-datasets/main/samplename_ancestry-json.json,https://raw.githubusercontent.com/atrigila/nf-saliva-test-datasets/main/sampletraits_traits-json.json
