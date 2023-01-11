@@ -10,12 +10,14 @@ process UPLOAD_MONGO {
     tuple val(meta), path("$updated_mongodb"),   optional:true, emit: updated_mongodb
 
     script:
+    def args = task.ext.args ?: ''
+    def prefix = task.ext.prefix ?: "${meta.id}"
     """
     Rscript --vanilla /home/anabella/R/upload2mongo2.r \\
-        -s ${meta} \\
+        -s ${prefix} \\
         -p ${prs}  \\
         -v ${vcf} \\
-        -a ${ancestry} \\
+        -a ${ancestry}
     """
 
 }

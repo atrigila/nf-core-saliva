@@ -143,19 +143,6 @@ workflow SALIVA {
     ch_bed_bim_fam = bed_ch.join(bim_ch).join(fam_ch)
     ch_bed_bim_fam.dump(tag:"CH_bed_bim_bam")
 
-    //
-    // MODULE: TILEDBVCF_STORE
-    //
-
-    tiledb_array_uri = Channel.of(params.uri)
-    ch_vcf_tbi_uri = ch_vcf_tbi.join(tiledb_array_uri)
-
-    ch_vcf_tbi_uri.view()
-
-    TILEDBVCF_STORE(
-        ch_vcf_tbi,
-        tiledb_array_uri
-    )
 
     //
     // MODULE: UPLOAD_MONGO
