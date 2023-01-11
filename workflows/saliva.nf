@@ -44,7 +44,7 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 include { TILEDBVCF_CREATE                      } from '../modules/local/tiledb-vcf/tiledbvcf_create'
 include { TILEDBVCF_STORE                       } from '../modules/local/tiledb-vcf/tiledb_vcf'
-
+include { TILEDBVCF_LIST                       } from '../modules/local/tiledb-vcf/tiledbvcf_list'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
@@ -141,7 +141,7 @@ workflow SALIVA {
         ch_uri
     )
 
-
+    ch_updateddb = TILEDBVCF_STORE.out.updatedb
 
 
 }
