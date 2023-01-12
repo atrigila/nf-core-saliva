@@ -4,7 +4,7 @@ process UPLOAD_MONGO {
     label 'process_low'
 
     input:
-    tuple val(meta), path(vcf), path(prs), path(ancestry)
+    tuple val(meta), path(vcf), path(prs), path(ancestry), val(mongo_uri)
 
     output:
     tuple val(meta), path("$updated_mongodb"),   optional:true, emit: updated_mongodb
@@ -17,7 +17,8 @@ process UPLOAD_MONGO {
         -s ${prefix} \\
         -p ${prs}  \\
         -v ${vcf} \\
-        -a ${ancestry}
+        -a ${ancestry} \\
+        -u ${mongo_uri}
     """
 
 }
