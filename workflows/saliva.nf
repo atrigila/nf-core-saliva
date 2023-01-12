@@ -11,7 +11,7 @@ WorkflowSaliva.initialise(params, log)
 
 // TODO nf-core: Add all file path parameters for the pipeline to the list below
 // Check input path parameters to see if they exist
-def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf, params.rsid_file , params.uri, params.url_mongo, params.input_vcf_samplesheet ]
+def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf, params.rsid_file , params.input_vcf_samplesheet ]
 //def checkPathParamList = [ params.multiqc_config, params.fasta, params.input, params.rsid_file  ] //, params.uri ] // If input is samplesheet
 
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
@@ -148,7 +148,9 @@ workflow SALIVA {
     // MODULE: UPLOAD_MONGO
     //
 
-    ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_ancestry).join(ch_vcf_json_multimap.ch_traits)
+    ch_mongo_uri = Channel.value(params.url_mongo)
+
+    ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_ancestry).join(ch_vcf_json_multimap.ch_traits).join(ch_mongo_uri)
     ch_to_mongo.dump(tag:"CH_updateddb_MONGO")
 
     UPLOAD_MONGO(
