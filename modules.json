@@ -25,6 +25,11 @@
                         "git_sha": "c8e35eb2055c099720a75538d1b8adb3fb5a464c",
                         "installed_by": ["modules"]
                     },
+                    "plink/recode": {
+                        "branch": "master",
+                        "git_sha": "b939293e081524bf4549513566c593822cee41f2",
+                        "installed_by": ["modules"]
+                    },
                     "plink/vcf": {
                         "branch": "master",
                         "git_sha": "c8e35eb2055c099720a75538d1b8adb3fb5a464c",
