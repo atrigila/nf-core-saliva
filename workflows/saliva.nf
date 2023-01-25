@@ -42,7 +42,6 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 // LOCAL MODULES:
 //
-include { PLINK_RECODE                     } from '../modules/local/plink_recode'
 include { TILEDBVCF_STORE                  } from '../modules/local/tiledb-vcf/tiledb_vcf'
 include { UPLOAD_MONGO                     } from '../modules/local/upload_db'
 
@@ -70,6 +69,7 @@ include { BCFTOOLS_NORM                 } from '../modules/nf-core/bcftools/norm
 include { VCFTOOLS                      } from '../modules/nf-core/vcftools/main'
 include { PLINK_VCF                     } from '../modules/nf-core/plink/vcf/main'
 include { BCFTOOLS_VIEW                 } from '../modules/nf-core/bcftools/view/main'
+include { PLINK_RECODE                  } from '../modules/nf-core/plink/recode/main'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -150,7 +150,8 @@ workflow SALIVA {
 
     ch_mongo_uri = Channel.value(params.url_mongo)
 
-    ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_ancestry).join(ch_vcf_json_multimap.ch_traits).join(ch_mongo_uri)
+    ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_traits).join(ch_vcf_json_multimap.ch_ancestry).join(ch_mongo_uri)
+    ch_to_mongo.view()
     ch_to_mongo.dump(tag:"CH_updateddb_MONGO")
 
     UPLOAD_MONGO(
