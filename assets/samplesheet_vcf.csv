@@ -1,2 +1,4 @@
 sample,vcf,ancestry,traits
-name_sample1,https://github.com/nf-core/test-datasets/raw/modules/data/genomics/sarscov2/illumina/vcf/test.vcf.gz,https://raw.githubusercontent.com/atrigila/nf-saliva-test-datasets/main/samplename_ancestry-json.json,https://raw.githubusercontent.com/atrigila/nf-saliva-test-datasets/main/sampletraits_traits-json.json
+sarscov2_sample,https://github.com/nf-core/test-datasets/raw/modules/data/genomics/sarscov2/illumina/vcf/test.vcf.gz,https://raw.githubusercontent.com/atrigila/nf-saliva-test-datasets/main/samplename_ancestry-json.json,https://raw.githubusercontent.com/atrigila/nf-saliva-test-datasets/main/sampletraits_traits-json.json
+new_88m_variants,/home/anabella/Descargas/adal/ADAL24121962-REP_impute-vcf.vcf.gz,https://raw.githubusercontent.com/atrigila/nf-saliva-test-datasets/main/samplename_ancestry-json.json,https://raw.githubusercontent.com/atrigila/nf-saliva-test-datasets/main/sampletraits_traits-json.json
+
