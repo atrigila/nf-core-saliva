@@ -47,7 +47,6 @@ include { UPLOAD_MONGO                     } from '../modules/local/upload_db'
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
-include { INPUT_CHECK                      } from '../subworkflows/local/input_check'
 include { INPUT_CHECK_VCF                  } from '../subworkflows/local/input_check_vcf'
 
 
@@ -109,6 +108,8 @@ workflow SALIVA {
     ch_vcf = ch_vcf_json_multimap.ch_vcf
     ch_vcf.dump(tag:"CH_VCF")
 
+    ch_vcf_json_multimap.ch_ancestry.dump(tag:"CH_ANCESTRY")
+
 
     //
     // MODULE: TABIX
@@ -133,7 +134,6 @@ workflow SALIVA {
     // MODULE: PLINK_VCF
     //
 
-    // Could there be a channel emiting all of them together at once?
     PLINK_VCF(
         ch_filtered_vcf
     )
@@ -151,16 +151,14 @@ workflow SALIVA {
 
     ch_mongo_uri = Channel.value(params.url_mongo)
 
-    ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_traits).join(ch_vcf_json_multimap.ch_ancestry).join(ch_mongo_uri)
-    ch_to_mongo.view()
-    ch_to_mongo.dump(tag:"CH_updateddb_MONGO")
+    ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_traits).join(ch_vcf_json_multimap.ch_ancestry)
+    ch_to_mongo.dump(tag:"CH_data_to_MONGO")
 
-    UPLOAD_MONGO(
-        ch_to_mongo
-    )
+    //UPLOAD_MONGO(     ch_to_mongo    )
 
     //ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
     //ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
+
 
 
 
