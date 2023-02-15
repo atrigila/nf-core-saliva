@@ -42,7 +42,6 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 // LOCAL MODULES:
 //
-include { TILEDBVCF_STORE                  } from '../modules/local/tiledb-vcf/tiledb_vcf'
 include { UPLOAD_MONGO                     } from '../modules/local/upload_db'
 
 //
@@ -120,6 +119,48 @@ workflow SALIVA {
     )
     ch_vcf_tbi = ch_vcf.join(TABIX_TABIX.out.tbi)
     ch_vcf_tbi.dump(tag:"CH_VCF_TBI") // this will print the channel contents when running nextflow with `-dump-channels`
+
+    //
+    // MODULE: VCFTOOLS
+    //
+    VCFTOOLS(
+        ch_vcf, [], []
+    )
+    ch_filtered_vcf = VCFTOOLS.out.vcf
+    ch_filtered_vcf.dump(tag:"CH_filtered_vcf_VCFTOOLS")
+
+    //
+    // MODULE: PLINK_VCF
+    //
+
+    // Could there be a channel emiting all of them together at once?
+    PLINK_VCF(
+        ch_filtered_vcf
+    )
+    bed_ch = PLINK_VCF.out.bed
+    bim_ch = PLINK_VCF.out.bim
+    fam_ch = PLINK_VCF.out.fam
+
+    ch_bed_bim_fam = bed_ch.join(bim_ch).join(fam_ch)
+    ch_bed_bim_fam.dump(tag:"CH_bed_bim_bam")
+
+
+    //
+    // MODULE: UPLOAD_MONGO
+    //
+
+    ch_mongo_uri = Channel.value(params.url_mongo)
+
+    ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_traits).join(ch_vcf_json_multimap.ch_ancestry).join(ch_mongo_uri)
+    ch_to_mongo.view()
+    ch_to_mongo.dump(tag:"CH_updateddb_MONGO")
+
+    UPLOAD_MONGO(
+        ch_to_mongo
+    )
+
+    //ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
+    //ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
 
 
 
