@@ -3,9 +3,9 @@ process UPLOAD_MONGO {
     tag "$meta.id"
     label 'process_low'
 
-
     input:
-    tuple val(meta), path(vcf), path(prs), path(ancestry), val(mongo_uri)
+    tuple val(meta), path(vcf), path(prs), path(ancestry)
+    val(mongo_uri)
 
     output:
     tuple val(meta), path("$updated_mongodb"),   optional:true, emit: updated_mongodb

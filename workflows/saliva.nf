@@ -154,10 +154,10 @@ workflow SALIVA {
     ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_traits).join(ch_vcf_json_multimap.ch_ancestry)
     ch_to_mongo.dump(tag:"CH_data_to_MONGO")
 
-    //UPLOAD_MONGO(     ch_to_mongo    )
+    UPLOAD_MONGO(     ch_to_mongo, ch_mongo_uri    )
 
-    //ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
-    //ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
+    ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
+    ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
 
 
 
