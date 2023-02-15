@@ -86,7 +86,7 @@ workflow SALIVA {
 
     ch_versions = Channel.empty()
 
-    // Branch to test and optimize VCF samplesheet reader
+    // Branch to test intermediate modules and upload to Mongo
 
     //
     // SUBWORKFLOW: Read in VCF samplesheet, validate and stage input files
@@ -120,6 +120,8 @@ workflow SALIVA {
     )
     ch_vcf_tbi = ch_vcf.join(TABIX_TABIX.out.tbi)
     ch_vcf_tbi.dump(tag:"CH_VCF_TBI") // this will print the channel contents when running nextflow with `-dump-channels`
+
+
 
 
 }
