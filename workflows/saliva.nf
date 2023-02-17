@@ -87,26 +87,88 @@ workflow SALIVA {
 
     // Branch to test download data from gencove
 
+    //
+    //  MODULE: GENCOVE
+    //
+    ch_projectID = Channel.value(params.projectid)
+    ch_apikey = Channel.value(params.apikey)
 
-            // GENCOVE MODULE
+    GENCOVE_DOWNLOAD (
+    ch_projectID,
+    ch_apikey
+    )
 
-            ch_projectID = Channel.value(params.projectid)
-            ch_apikey = Channel.value(params.apikey)
-
-            GENCOVE_DOWNLOAD (
-            ch_projectID,
-            ch_apikey
-            )
-
-            ch_gencove_ancestry = GENCOVE_DOWNLOAD.out.ancestryjson
-            ch_gencove_ancestry = GENCOVE_DOWNLOAD.out.ancestryjson
-            ch_gencove_ancestry = GENCOVE_DOWNLOAD.out.ancestryjson
-            ch_gencove_ancestry = GENCOVE_DOWNLOAD.out.ancestryjson
-            ch_gencove_ancestry.dump(tag:"CH_JSON")
-
-
+    ch_gencove_ancestry = GENCOVE_DOWNLOAD.out.ancestryjson
+    ch_gencove_traits = GENCOVE_DOWNLOAD.out.traitsjson
+    ch_gencove_vcf = GENCOVE_DOWNLOAD.out.vcf
+    ch_gencove_tbi = GENCOVE_DOWNLOAD.out.tbi
+    ch_gencove_ancestry.dump(tag:"CH_JSON")
 
 
+    ch_individual_ancestry = ch_gencove_ancestry.flatten()
+    ch_individual_ancestry = ch_individual_ancestry.map { file ->
+                return [[id: (file.simpleName.replaceAll('_ancestry-json',''))], file]
+                }
+    ch_individual_ancestry.dump(tag:"CH_individual_ancestry")
+
+    ch_individual_traits = ch_gencove_traits.flatten()
+    ch_individual_traits = ch_individual_traits.map { file ->
+                return [[id: (file.simpleName.replaceAll('_traits-json',''))], file]
+                }
+    ch_individual_traits.dump(tag:"CH_individual_traits")
+
+    ch_individual_gencove_vcf = ch_gencove_vcf.flatten()
+    ch_individual_gencove_vcf = ch_gencove_vcf.map { file ->
+                return [[id: (file.simpleName.replaceAll('_impute-vcf',''))], file]
+                }
+    ch_individual_gencove_vcf.dump(tag:"CH_individual_vcf")
+
+    ch_individual_gencove_tbi = ch_gencove_tbi.flatten()
+    ch_individual_gencove_tbi = ch_individual_gencove_tbi.map { file ->
+                return [[id: (file.simpleName.replaceAll('_impute-tbi',''))], file]
+                }
+    ch_individual_gencove_tbi.dump(tag:"CH_individual_tbi")
+
+    ch_joined = ch_individual_ancestry.join(ch_individual_traits).join(ch_individual_gencove_vcf).join(ch_individual_gencove_tbi)
+    ch_joined.dump(tag:"CH_joined_traits")
+
+    //
+    // MODULE: VCFTOOLS
+    //
+    VCFTOOLS(
+        ch_individual_gencove_vcf, [], []
+    )
+    ch_filtered_vcf = VCFTOOLS.out.vcf
+    ch_filtered_vcf.dump(tag:"CH_filtered_vcf_VCFTOOLS")
+
+    //
+    // MODULE: PLINK_VCF
+    //
+
+    PLINK_VCF(
+        ch_filtered_vcf
+    )
+    bed_ch = PLINK_VCF.out.bed
+    bim_ch = PLINK_VCF.out.bim
+    fam_ch = PLINK_VCF.out.fam
+
+    ch_bed_bim_fam = bed_ch.join(bim_ch).join(fam_ch)
+    ch_bed_bim_fam.dump(tag:"CH_bed_bim_bam")
+
+
+    //
+    // MODULE: UPLOAD_MONGO
+    //
+
+    ch_mongo_uri = Channel.value(params.url_mongo)
+
+    ch_to_mongo = ch_filtered_vcf.join(ch_individual_traits).join(ch_individual_ancestry)
+    ch_to_mongo.dump(tag:"CH_data_to_MONGO")
+
+    UPLOAD_MONGO(     ch_to_mongo, ch_mongo_uri    )
+
+    ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
+    ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
 
 
 
