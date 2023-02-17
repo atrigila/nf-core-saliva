@@ -43,6 +43,7 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 // LOCAL MODULES:
 //
 include { UPLOAD_MONGO                     } from '../modules/local/upload_db'
+include { GENCOVE_DOWNLOAD                     } from '../modules/local/gencove'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
@@ -84,80 +85,26 @@ workflow SALIVA {
 
     ch_versions = Channel.empty()
 
-    // Branch to test intermediate modules and upload to Mongo
-
-    //
-    // SUBWORKFLOW: Read in VCF samplesheet, validate and stage input files
-    //
-
-    INPUT_CHECK_VCF (
-        ch_input_vcf_samplesheet
-    )
-    ch_versions = ch_versions.mix(INPUT_CHECK_VCF.out.versions)
-
-    ch_vcf_json= INPUT_CHECK_VCF.out.vcf_json
-    ch_vcf_json.dump(tag:"CH_VCF_JSON")
-
-    INPUT_CHECK_VCF.out.vcf_json.multiMap { meta, vcf, ancestry, traits ->
-        ch_vcf: [meta, vcf]
-        ch_ancestry: [meta, ancestry]
-        ch_traits: [meta, traits]
-    }
-    .set { ch_vcf_json_multimap}
-
-    ch_vcf = ch_vcf_json_multimap.ch_vcf
-    ch_vcf.dump(tag:"CH_VCF")
-
-    ch_vcf_json_multimap.ch_ancestry.dump(tag:"CH_ANCESTRY")
+    // Branch to test download data from gencove
 
 
-    //
-    // MODULE: TABIX
-    //
+            // GENCOVE MODULE
 
-    TABIX_TABIX(
-        ch_vcf
-    )
-    ch_vcf_tbi = ch_vcf.join(TABIX_TABIX.out.tbi)
-    ch_vcf_tbi.dump(tag:"CH_VCF_TBI") // this will print the channel contents when running nextflow with `-dump-channels`
+            ch_projectID = Channel.value(params.projectid)
+            ch_apikey = Channel.value(params.apikey)
 
-    //
-    // MODULE: VCFTOOLS
-    //
-    VCFTOOLS(
-        ch_vcf, [], []
-    )
-    ch_filtered_vcf = VCFTOOLS.out.vcf
-    ch_filtered_vcf.dump(tag:"CH_filtered_vcf_VCFTOOLS")
+            GENCOVE_DOWNLOAD (
+            ch_projectID,
+            ch_apikey
+            )
 
-    //
-    // MODULE: PLINK_VCF
-    //
-
-    PLINK_VCF(
-        ch_filtered_vcf
-    )
-    bed_ch = PLINK_VCF.out.bed
-    bim_ch = PLINK_VCF.out.bim
-    fam_ch = PLINK_VCF.out.fam
-
-    ch_bed_bim_fam = bed_ch.join(bim_ch).join(fam_ch)
-    ch_bed_bim_fam.dump(tag:"CH_bed_bim_bam")
+            ch_gencove_ancestry = GENCOVE_DOWNLOAD.out.ancestryjson
+            ch_gencove_ancestry = GENCOVE_DOWNLOAD.out.ancestryjson
+            ch_gencove_ancestry = GENCOVE_DOWNLOAD.out.ancestryjson
+            ch_gencove_ancestry = GENCOVE_DOWNLOAD.out.ancestryjson
+            ch_gencove_ancestry.dump(tag:"CH_JSON")
 
 
-    //
-    // MODULE: UPLOAD_MONGO
-    //
-
-    ch_mongo_uri = Channel.value(params.url_mongo)
-
-    ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_traits).join(ch_vcf_json_multimap.ch_ancestry)
-    ch_to_mongo.dump(tag:"CH_data_to_MONGO")
-
-    UPLOAD_MONGO(     ch_to_mongo, ch_mongo_uri    )
-
-    ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
-    ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
 
 
 
