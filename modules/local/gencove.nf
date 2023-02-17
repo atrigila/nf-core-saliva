@@ -30,7 +30,6 @@ process GENCOVE_DOWNLOAD {
         download . \\
         $args \\
         --project-id $projectid \\
-        --file-types ancestry-json \\
         --api-key $api_key
 
     cat <<-END_VERSIONS > versions.yml
