@@ -10,7 +10,7 @@
             "type": "object",
             "fa_icon": "fas fa-terminal",
             "description": "Define where the pipeline should find input data and save output data.",
-            "required": ["outdir", "input_vcf_samplesheet", "url_mongo", "rsid_file"],
+            "required": ["outdir", "url_mongo", "rsid_file"],
             "properties": {
                 "input_vcf_samplesheet": {
                     "type": "string",
@@ -36,8 +36,7 @@
                     "default": "None",
                     "fa_icon": "fas fa-align-center",
                     "format": "path",
-                    "description": "Path to .txt file with list of IDs to filter",
-                    "help_text": ""
+                    "description": "Path to .txt file with list of IDs to filter"
                 },
                 "input": {
                     "type": "string",
@@ -310,5 +309,15 @@
         {
             "$ref": "#/definitions/generic_options"
         }
-    ]
+    ],
+    "properties": {
+        "apikey": {
+            "type": "string",
+            "default": null
+        },
+        "projectid": {
+            "type": "string",
+            "default": null
+        }
+    }
 }
