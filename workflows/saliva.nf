@@ -17,8 +17,8 @@ def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 // Check mandatory parameters
-if (params.input_vcf ) { ch_input = file(params.input_vcf) } else { exit 1, 'Input vcf not specified!' } // If input is VCF
-if (params.input_vcf_samplesheet) { ch_input_vcf_samplesheet = file(params.input_vcf_samplesheet) } else { exit 1, 'Input VCF samplesheet not specified!' }
+//if (params.input_vcf ) { ch_input = file(params.input_vcf) } else { exit 1, 'Input vcf not specified!' } // If input is VCF
+//if (params.input_vcf_samplesheet) { ch_input_vcf_samplesheet = file(params.input_vcf_samplesheet) } else { exit 1, 'Input VCF samplesheet not specified!' }
 //if (params.input) { ch_input = file(params.input) } else { exit 1, 'Input samplesheet not specified!' } // If input is Samplesheet
 
 
