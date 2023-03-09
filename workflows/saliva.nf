@@ -17,8 +17,6 @@ def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 // Check mandatory parameters
-if (params.input_vcf ) { ch_input = file(params.input_vcf) } else { exit 1, 'Input vcf not specified!' } // If input is VCF
-if (params.input_vcf_samplesheet) { ch_input_vcf_samplesheet = file(params.input_vcf_samplesheet) } else { exit 1, 'Input VCF samplesheet not specified!' }
 //if (params.input) { ch_input = file(params.input) } else { exit 1, 'Input samplesheet not specified!' } // If input is Samplesheet
 
 
@@ -99,30 +97,37 @@ workflow SALIVA {
     )
 
     ch_gencove_ancestry = GENCOVE_DOWNLOAD.out.ancestryjson
-    ch_gencove_traits = GENCOVE_DOWNLOAD.out.traitsjson
+    ch_gencove_ancestry.dump(tag:"CH_ANCESTRYJSON_OUT")
     ch_gencove_vcf = GENCOVE_DOWNLOAD.out.vcf
+    ch_gencove_vcf.dump(tag:"CH_VCF")
+    ch_gencove_traits = GENCOVE_DOWNLOAD.out.traitsjson
     ch_gencove_tbi = GENCOVE_DOWNLOAD.out.tbi
-    ch_gencove_ancestry.dump(tag:"CH_JSON")
 
-
+    // Assign an ID to each file: JSON Ancestry
     ch_individual_ancestry = ch_gencove_ancestry.flatten()
+    ch_individual_ancestry.dump(tag:"CH_ANCESTRYJSON_FLATTEN")
     ch_individual_ancestry = ch_individual_ancestry.map { file ->
                 return [[id: (file.simpleName.replaceAll('_ancestry-json',''))], file]
                 }
     ch_individual_ancestry.dump(tag:"CH_individual_ancestry")
 
+    // Assign an ID to each file: JSON Traits
     ch_individual_traits = ch_gencove_traits.flatten()
     ch_individual_traits = ch_individual_traits.map { file ->
                 return [[id: (file.simpleName.replaceAll('_traits-json',''))], file]
                 }
     ch_individual_traits.dump(tag:"CH_individual_traits")
 
-    ch_individual_gencove_vcf = ch_gencove_vcf.flatten()
-    ch_individual_gencove_vcf = ch_gencove_vcf.map { file ->
-                return [[id: (file.simpleName.replaceAll('_impute-vcf',''))], file]
+    // Assign an ID to each file: VCF
+    ch_individual_gencove_vcf_flatten = ch_gencove_vcf.flatten()
+    ch_individual_gencove_vcf_flatten.dump(tag:"CH_gencove_vcf_flatten")
+
+    ch_individual_gencove_vcf = ch_individual_gencove_vcf_flatten.map { file ->
+                return [[id: (file.simpleName.replaceAll("_impute-vcf",''))], file]
                 }
     ch_individual_gencove_vcf.dump(tag:"CH_individual_vcf")
 
+    // Assign an ID to each file: TBI
     ch_individual_gencove_tbi = ch_gencove_tbi.flatten()
     ch_individual_gencove_tbi = ch_individual_gencove_tbi.map { file ->
                 return [[id: (file.simpleName.replaceAll('_impute-tbi',''))], file]
