@@ -1,6 +1,6 @@
 
 process GENCOVE_DOWNLOAD {
-    tag '$projectid'
+    tag "$projectid"
     label 'process_medium'
 
     conda "bioconda::gencove=2.4.5"
