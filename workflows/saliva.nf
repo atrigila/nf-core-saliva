@@ -100,13 +100,18 @@ workflow SALIVA {
     )
 
     ch_gencove_ancestry = GENCOVE_DOWNLOAD.out.ancestryjson
+    ch_gencove_ancestry.dump(tag:"CH_ANCESTRYJSON_OUT")
+
     ch_gencove_traits = GENCOVE_DOWNLOAD.out.traitsjson
+
     ch_gencove_vcf = GENCOVE_DOWNLOAD.out.vcf
+    ch_gencove_vcf.dump(tag:"CH_VCF")
+
     ch_gencove_tbi = GENCOVE_DOWNLOAD.out.tbi
-    ch_gencove_ancestry.dump(tag:"CH_JSON")
 
 
     ch_individual_ancestry = ch_gencove_ancestry.flatten()
+    ch_individual_ancestry.dump(tag:"CH_ANCESTRYJSON_FLATTEN")
     ch_individual_ancestry = ch_individual_ancestry.map { file ->
                 return [[id: (file.simpleName.replaceAll('_ancestry-json',''))], file]
                 }
@@ -119,8 +124,9 @@ workflow SALIVA {
     ch_individual_traits.dump(tag:"CH_individual_traits")
 
     ch_individual_gencove_vcf = ch_gencove_vcf.flatten()
+    ch_individual_gencove_vcf.dump(tag:"CH_gencove_vcf_flatten")
     ch_individual_gencove_vcf = ch_gencove_vcf.map { file ->
-                return [[id: (file.simpleName.replaceAll('_impute-vcf',''))], file]
+                return [[id: (file.simpleName.replaceAll("_impute-vcf",''))], file]
                 }
     ch_individual_gencove_vcf.dump(tag:"CH_individual_vcf")
 
