@@ -1,7 +1,7 @@
 
 process GENCOVE_DOWNLOAD {
     tag "$projectid"
-    label 'process_low'
+    label 'process_medium'
 
     conda "bioconda::gencove=2.4.5"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
