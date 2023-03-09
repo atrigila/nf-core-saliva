@@ -86,7 +86,7 @@ workflow SALIVA {
 
     ch_versions = Channel.empty()
 
-    //
+    // test commit master branch
     // SUBWORKFLOW: Read in VCF samplesheet, validate and stage input files
     //
 
