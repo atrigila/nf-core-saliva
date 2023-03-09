@@ -17,8 +17,6 @@ def checkPathParamList = [ params.multiqc_config, params.fasta, params.input_vcf
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 // Check mandatory parameters
-if (params.input_vcf ) { ch_input = file(params.input_vcf) } else { exit 1, 'Input vcf not specified!' } // If input is VCF
-if (params.input_vcf_samplesheet) { ch_input_vcf_samplesheet = file(params.input_vcf_samplesheet) } else { exit 1, 'Input VCF samplesheet not specified!' }
 //if (params.input) { ch_input = file(params.input) } else { exit 1, 'Input samplesheet not specified!' } // If input is Samplesheet
 
 
@@ -42,13 +40,13 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 // LOCAL MODULES:
 //
-include { TILEDBVCF_STORE                  } from '../modules/local/tiledb-vcf/tiledb_vcf'
 include { UPLOAD_MONGO                     } from '../modules/local/upload_db'
+include { GENCOVE_DOWNLOAD                     } from '../modules/local/gencove'
+include { TILEDBVCF_STORE                     } from '../modules/local/tiledb_store'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
-include { INPUT_CHECK                      } from '../subworkflows/local/input_check'
 include { INPUT_CHECK_VCF                  } from '../subworkflows/local/input_check_vcf'
 
 
@@ -86,44 +84,65 @@ workflow SALIVA {
 
     ch_versions = Channel.empty()
 
-    // test commit master branch
-    // SUBWORKFLOW: Read in VCF samplesheet, validate and stage input files
-    //
 
-    INPUT_CHECK_VCF (
-        ch_input_vcf_samplesheet
+
+    //
+    //  MODULE: GENCOVE
+    //
+    ch_projectID = Channel.value(params.projectid)
+    ch_apikey = Channel.value(params.apikey)
+
+    GENCOVE_DOWNLOAD (
+    ch_projectID,
+    ch_apikey
     )
-    ch_versions = ch_versions.mix(INPUT_CHECK_VCF.out.versions)
 
-    ch_vcf_json= INPUT_CHECK_VCF.out.vcf_json
-    ch_vcf_json.dump(tag:"CH_VCF_JSON")
+    ch_gencove_ancestry = GENCOVE_DOWNLOAD.out.ancestryjson
+    ch_gencove_ancestry.dump(tag:"CH_ANCESTRYJSON_OUT")
+    ch_gencove_vcf = GENCOVE_DOWNLOAD.out.vcf
+    ch_gencove_vcf.dump(tag:"CH_VCF")
+    ch_gencove_traits = GENCOVE_DOWNLOAD.out.traitsjson
+    ch_gencove_tbi = GENCOVE_DOWNLOAD.out.tbi
 
-    INPUT_CHECK_VCF.out.vcf_json.multiMap { meta, vcf, ancestry, traits ->
-        ch_vcf: [meta, vcf]
-        ch_ancestry: [meta, ancestry]
-        ch_traits: [meta, traits]
-    }
-    .set { ch_vcf_json_multimap}
+    // Assign an ID to each file: JSON Ancestry
+    ch_individual_ancestry = ch_gencove_ancestry.flatten()
+    ch_individual_ancestry.dump(tag:"CH_ANCESTRYJSON_FLATTEN")
+    ch_individual_ancestry = ch_individual_ancestry.map { file ->
+                return [[id: (file.simpleName.replaceAll('_ancestry-json',''))], file]
+                }
+    ch_individual_ancestry.dump(tag:"CH_individual_ancestry")
 
-    ch_vcf = ch_vcf_json_multimap.ch_vcf
-    ch_vcf.dump(tag:"CH_VCF")
+    // Assign an ID to each file: JSON Traits
+    ch_individual_traits = ch_gencove_traits.flatten()
+    ch_individual_traits = ch_individual_traits.map { file ->
+                return [[id: (file.simpleName.replaceAll('_traits-json',''))], file]
+                }
+    ch_individual_traits.dump(tag:"CH_individual_traits")
 
+    // Assign an ID to each file: VCF
+    ch_individual_gencove_vcf_flatten = ch_gencove_vcf.flatten()
+    ch_individual_gencove_vcf_flatten.dump(tag:"CH_gencove_vcf_flatten")
 
-    //
-    // MODULE: TABIX
-    //
+    ch_individual_gencove_vcf = ch_individual_gencove_vcf_flatten.map { file ->
+                return [[id: (file.simpleName.replaceAll("_impute-vcf",''))], file]
+                }
+    ch_individual_gencove_vcf.dump(tag:"CH_individual_vcf")
 
-    TABIX_TABIX(
-        ch_vcf
-    )
-    ch_vcf_tbi = ch_vcf.join(TABIX_TABIX.out.tbi)
-    ch_vcf_tbi.dump(tag:"CH_VCF_TBI") // this will print the channel contents when running nextflow with `-dump-channels`
+    // Assign an ID to each file: TBI
+    ch_individual_gencove_tbi = ch_gencove_tbi.flatten()
+    ch_individual_gencove_tbi = ch_individual_gencove_tbi.map { file ->
+                return [[id: (file.simpleName.replaceAll('_impute-tbi',''))], file]
+                }
+    ch_individual_gencove_tbi.dump(tag:"CH_individual_tbi")
+
+    ch_joined = ch_individual_ancestry.join(ch_individual_traits).join(ch_individual_gencove_vcf).join(ch_individual_gencove_tbi)
+    ch_joined.dump(tag:"CH_joined_traits")
 
     //
     // MODULE: VCFTOOLS
     //
     VCFTOOLS(
-        ch_vcf, [], []
+        ch_individual_gencove_vcf, [], []
     )
     ch_filtered_vcf = VCFTOOLS.out.vcf
     ch_filtered_vcf.dump(tag:"CH_filtered_vcf_VCFTOOLS")
@@ -132,7 +151,6 @@ workflow SALIVA {
     // MODULE: PLINK_VCF
     //
 
-    // Could there be a channel emiting all of them together at once?
     PLINK_VCF(
         ch_filtered_vcf
     )
@@ -150,16 +168,41 @@ workflow SALIVA {
 
     ch_mongo_uri = Channel.value(params.url_mongo)
 
-    ch_to_mongo = ch_filtered_vcf.join(ch_vcf_json_multimap.ch_traits).join(ch_vcf_json_multimap.ch_ancestry).join(ch_mongo_uri)
-    ch_to_mongo.view()
-    ch_to_mongo.dump(tag:"CH_updateddb_MONGO")
+    ch_to_mongo = ch_filtered_vcf.join(ch_individual_traits).join(ch_individual_ancestry)
+    ch_to_mongo.dump(tag:"CH_data_to_MONGO")
 
-    UPLOAD_MONGO(
-        ch_to_mongo
-    )
+    UPLOAD_MONGO(     ch_to_mongo, ch_mongo_uri    )
 
-    //ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
-    //ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
+    ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
+    ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
+
+
+    //
+    // MODULE: TABIX
+    //
+
+    TABIX_TABIX(ch_individual_gencove_vcf)
+    ch_tbi = TABIX_TABIX.out.tbi
+    ch_vcf_tbi = ch_individual_gencove_vcf.join(ch_tbi)
+    ch_vcf_tbi.dump(tag:"CH_VCF_tbi")
+
+    //
+    // MODULE: TILEDBVCF_STORE
+    //
+
+    ch_tiledbvcf_uri = Channel.value(params.tiledbvcf_uri)
+
+    TILEDBVCF_STORE(ch_vcf_tbi, ch_tiledbvcf_uri)
+
+    ch_out_updatedtiledb = TILEDBVCF_STORE.out.updateddb
+    ch_out_updatedtiledb.dump(tag:"CH_updateddb_TILEDB")
+
+
+
+
+
+
+
 }
 
 
