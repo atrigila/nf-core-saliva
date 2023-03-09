@@ -42,8 +42,9 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 // LOCAL MODULES:
 //
-include { UPLOAD_MONGO                     } from '../modules/local/upload_db'
-include { GENCOVE_DOWNLOAD                     } from '../modules/local/gencove'
+include { UPLOAD_MONGO                        } from '../modules/local/upload_db'
+include { GENCOVE_DOWNLOAD                    } from '../modules/local/gencove'
+include { TILEDBVCF_STORE                     } from '../modules/local/tiledb_store'
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
@@ -169,6 +170,28 @@ workflow SALIVA {
 
     ch_out_updatedmongodb = UPLOAD_MONGO.out.updated_mongodb
     ch_out_updatedmongodb.dump(tag:"CH_updateddb_MONGO")
+
+
+
+    //
+    // MODULE: TABIX
+    //
+
+    TABIX_TABIX(ch_individual_gencove_vcf)
+    ch_tbi = TABIX_TABIX.out.tbi
+    ch_vcf_tbi = ch_individual_gencove_vcf.join(ch_tbi)
+    ch_vcf_tbi.dump(tag:"CH_VCF_tbi")
+
+    //
+    // MODULE: TILEDBVCF_STORE
+    //
+
+    ch_tiledbvcf_uri = Channel.value(params.tiledbvcf_uri)
+
+    TILEDBVCF_STORE(ch_vcf_tbi, ch_tiledbvcf_uri)
+
+    ch_out_updatedtiledb = TILEDBVCF_STORE.out.updateddb
+    ch_out_updatedtiledb.dump(tag:"CH_updateddb_TILEDB")
 
 
 
