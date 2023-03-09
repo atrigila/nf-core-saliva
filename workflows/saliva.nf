@@ -82,7 +82,7 @@ workflow SALIVA {
 
     ch_versions = Channel.empty()
 
-    // Branch to test download data from gencove
+
 
     //
     //  MODULE: GENCOVE
